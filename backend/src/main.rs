@@ -46,6 +46,10 @@ async fn main() {
         .route("/api/presentations", get(list_presentations).post(create_presentation))
         .route("/api/presentations/{id}", get(get_presentation).delete(delete_presentation))
         .route("/api/presentations/{id}/slides", axum::routing::post(add_slide))
+        .route(
+            "/api/presentations/{id}/slides/{slide_id}",
+            axum::routing::put(update_slide).delete(delete_slide),
+        )
         .with_state(database);
 
     let address = SocketAddr::from(([127, 0, 0, 1], 3001));
@@ -131,3 +135,52 @@ async fn add_slide(
 
     Ok((StatusCode::CREATED, Json(slide)))
 }
+
+
+#[derive(Deserialize)]
+struct UpdateSlide {
+    title: String,
+    content: String,
+}
+
+async fn update_slide(
+    Path((id, slide_id)): Path<(Uuid, Uuid)>,
+    State(db): State<Database>,
+    Json(input): Json<UpdateSlide>,
+) -> Result<Json<Slide>, StatusCode> {
+    let mut db = db.write().await;
+
+    let presentation = db.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
+
+    let slide = presentation
+        .slides
+        .iter_mut()
+        .find(|slide| slide.id == slide_id)
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    slide.title = input.title;
+    slide.content = input.content;
+
+    Ok(Json(slide.clone()))
+}
+
+async fn delete_slide(
+    Path((id, slide_id)): Path<(Uuid, Uuid)>,
+    State(db): State<Database>,
+) -> StatusCode {
+    let mut db = db.write().await;
+
+    let Some(presentation) = db.get_mut(&id) else {
+        return StatusCode::NOT_FOUND;
+    };
+
+    let original_count = presentation.slides.len();
+    presentation.slides.retain(|slide| slide.id != slide_id);
+
+    if presentation.slides.len() < original_count {
+        StatusCode::NO_CONTENT
+    } else {
+        StatusCode::NOT_FOUND
+    }
+}
+
