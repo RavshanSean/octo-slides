@@ -184,3 +184,84 @@ async fn delete_slide(
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_presentation_data() {
+        let presentation = Presentation {
+            id: Uuid::new_v4(),
+            title: "Cybersecurity Fundamentals".to_string(),
+            slides: Vec::new(),
+        };
+
+        assert_eq!(presentation.title, "Cybersecurity Fundamentals");
+        assert!(presentation.slides.is_empty());
+    }
+
+    #[test]
+    fn test_add_slide_data() {
+        let mut presentation = Presentation {
+            id: Uuid::new_v4(),
+            title: "Cybersecurity".to_string(),
+            slides: Vec::new(),
+        };
+
+        presentation.slides.push(Slide {
+            id: Uuid::new_v4(),
+            title: "Introduction".to_string(),
+            content: "Understanding cybersecurity".to_string(),
+        });
+
+        assert_eq!(presentation.slides.len(), 1);
+        assert_eq!(presentation.slides[0].title, "Introduction");
+    }
+
+    #[test]
+    fn test_update_slide_data() {
+        let mut slide = Slide {
+            id: Uuid::new_v4(),
+            title: "Old Title".to_string(),
+            content: "Old Content".to_string(),
+        };
+
+        slide.title = "Updated Title".to_string();
+        slide.content = "Updated Content".to_string();
+
+        assert_eq!(slide.title, "Updated Title");
+        assert_eq!(slide.content, "Updated Content");
+    }
+
+    #[test]
+    fn test_delete_slide_data() {
+        let slide_id = Uuid::new_v4();
+
+        let mut slides = vec![Slide {
+            id: slide_id,
+            title: "Temporary Slide".to_string(),
+            content: "Delete me".to_string(),
+        }];
+
+        slides.retain(|slide| slide.id != slide_id);
+
+        assert!(slides.is_empty());
+    }
+
+    #[test]
+    fn test_presentation_json_serialization() {
+        let presentation = Presentation {
+            id: Uuid::new_v4(),
+            title: "AI Presentation".to_string(),
+            slides: Vec::new(),
+        };
+
+        let json = serde_json::to_string(&presentation)
+            .expect("Serialization should succeed");
+
+        assert!(json.contains("AI Presentation"));
+        assert!(json.contains("\"slides\":[]"));
+    }
+}
+
