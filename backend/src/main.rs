@@ -1,3 +1,5 @@
+mod slide_design;
+
 use axum::{
     Json, Router,
     extract::{Path, State},
@@ -97,9 +99,15 @@ async fn main() {
     .await
     .expect("Failed to create slides table");
 
+    slide_design::initialize(&sqlite)
+        .await
+        .expect("Failed to initialize slide designs");
+
     println!("SQLite database connected successfully!");
 
-    let state = AppState { sqlite };
+    let state = AppState {
+        sqlite: sqlite.clone(),
+    };
 
     let app = Router::new()
         .route("/health", get(health_check))
@@ -119,7 +127,8 @@ async fn main() {
             "/api/presentations/{id}/slides/{slide_id}",
             axum::routing::put(update_slide).delete(delete_slide),
         )
-        .with_state(state);
+        .with_state(state)
+        .merge(slide_design::routes(sqlite.clone()));
 
     let address = SocketAddr::from(([127, 0, 0, 1], 3001));
 
